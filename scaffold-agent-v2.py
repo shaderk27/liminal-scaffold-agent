@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import shutil
 from pydantic import BaseModel, Field
 from ollama import chat
@@ -18,7 +17,7 @@ class ServiceSpec(BaseModel):
 class ArchitectureBlueprint(BaseModel):
     project_summary: str
     irc_missing_requirements_resolved: list[str] = Field(
-        description="List of missing or ambiguous requirements caught by the Incongruous Requirements Checklist (IRC) and how the architect resolved them (e.g., CORS, env vars, healthchecks)."
+        description="List of missing or ambiguous requirements caught by the Incongruous Requirements Checklist (IRC) and how the architect resolved them."
     )
     services: list[ServiceSpec]
     required_files: list[str] = Field(
@@ -38,9 +37,9 @@ def stage_1_plan_architecture(user_prompt: str) -> ArchitectureBlueprint:
     You are a Principal Systems Architect. Analyze the user's project prompt and produce a strict ArchitectureBlueprint.
     
     CRITICAL ARCHITECTURAL RULES:
-    1. Run an Incongruous Requirements Checklist (IRC): Identify unstated requirements needed for the system to actually build and talk over a network (e.g., CORS headers, database environment variables, container networking, dependency manifests).
+    1. Run an Incongruous Requirements Checklist (IRC): Identify unstated requirements needed for the system to actually build and talk over a network (e.g., CORS headers, database environment variables, automatic table seeding, container networking, dependency manifests).
     2. Enforce a SINGLE canonical directory per service. Never create both 'backend/' and 'web/', or split frontend files between 'frontend/' and a root 'src/'.
-    3. For a containerized Flask + React + PostgreSQL stack, your 'required_files' list MUST strictly follow this clean structure:
+    3. For a containerized Flask + React + PostgreSQL stack, your 'required_files' list MUST strictly follow this exact order and structure:
        - docker-compose.yml
        - backend/Dockerfile
        - backend/requirements.txt
@@ -50,7 +49,6 @@ def stage_1_plan_architecture(user_prompt: str) -> ArchitectureBlueprint:
        - frontend/public/index.html
        - frontend/src/index.js
        - frontend/src/App.js
-    4. If the user asks for a different stack, adapt the file tree cleanly with zero duplicate folders.
     """
 
     response = chat(
@@ -78,15 +76,11 @@ def stage_2_generate_files(user_prompt: str, blueprint: ArchitectureBlueprint):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     blueprint_json = blueprint.model_dump_json(indent=2)
-    
-    # Store previously generated critical files (like docker-compose.yml and backend/app.py)
-    # so downstream files (like frontend/src/App.js) can match exact API routes and env vars.
     generated_context_cache: dict[str, str] = {}
 
     for index, target_file in enumerate(blueprint.required_files, start=1):
         print(f"  -> [{index}/{len(blueprint.required_files)}] Generating {target_file}...")
         
-        # Build dynamic upstream code context for cross-file contract alignment
         upstream_context_str = ""
         for ctx_path, ctx_code in generated_context_cache.items():
             upstream_context_str += f"\n--- ALREADY GENERATED {ctx_path} ---\n{ctx_code}\n"
@@ -102,12 +96,21 @@ def stage_2_generate_files(user_prompt: str, blueprint: ArchitectureBlueprint):
         1. Rely exclusively on generic, standardized mock data. Never reference or hardcode specific teammate names.
         2. Ensure all ports, service names, environment variables, and API routes match the LOCKED ARCHITECTURE BLUEPRINT and any ALREADY GENERATED files above.
         3. Do NOT import any local files (such as './App.css', './index.css', or './logo.svg') unless they are explicitly listed in 'required_files'. Use inline styles in React components.
-        4. If generating 'docker-compose.yml', do NOT include the obsolete top-level 'version:' key.
+        4. If generating 'docker-compose.yml':
+           - Do NOT include the obsolete top-level 'version:' key.
+           - Use 'postgres:15-alpine' for the db service with POSTGRES_DB=ecommerce, POSTGRES_USER=user, POSTGRES_PASSWORD=password.
+           - Pass DB_HOST=db, DB_NAME=ecommerce, DB_USER=user, DB_PASSWORD=password in the backend service environment.
         5. If generating 'backend/Dockerfile', use 'python:3.11-slim' and run the app with 'python app.py'.
-        6. If generating 'backend/requirements.txt', pin compatible versions: Flask==3.0.0, flask-cors==4.0.0, psycopg2-binary==2.9.9.
-        7. If generating 'backend/app.py', read DB credentials from os.environ (matching docker-compose.yml), automatically run 'CREATE TABLE IF NOT EXISTS' and insert 3 generic sample rows if the table is empty, and expose JSON endpoints.
-        8. If generating 'frontend/src/App.js', you MUST use React useState and useEffect to fetch data from the exact GET endpoint defined in 'backend/app.py' (e.g., http://localhost:5000/products) and render the items in a clean inline-styled list or table.
-        9. If generating 'frontend/Dockerfile', use 'node:18-alpine', install dependencies, and run with 'npm start'.
+        6. If generating 'backend/requirements.txt', pin exact versions: Flask==3.0.0, flask-cors==4.0.0, psycopg2-binary==2.9.9.
+        7. If generating 'backend/app.py':
+           - Enable CORS(app).
+           - Read DB_HOST, DB_NAME, DB_USER, DB_PASSWORD from os.environ with fallback defaults ('db', 'ecommerce', 'user', 'password').
+           - Create a helper function 'init_db()' decorated with '@app.before_request' that runs 'CREATE TABLE IF NOT EXISTS products (id SERIAL PRIMARY KEY, name VARCHAR(100), price NUMERIC(10,2));' and inserts 3 generic sample products if 'SELECT COUNT(*) FROM products' is 0.
+           - In 'GET /products', use 'psycopg2.extras.RealDictCursor' (or map rows to dicts: [{'id': r[0], 'name': r[1], 'price': float(r[2])}]) so it returns a JSON list of objects with 'id', 'name', and 'price' keys.
+        8. If generating 'frontend/src/App.js':
+           - Use React useState and useEffect to fetch from 'http://localhost:5000/products'.
+           - Render the returned array of product objects (id, name, price) in an inline-styled HTML table.
+        9. If generating 'frontend/Dockerfile', use 'node:18-alpine', copy package.json, run 'npm install', copy source files, and run 'npm start'.
         """
 
         code_content = ""
@@ -135,7 +138,6 @@ def stage_2_generate_files(user_prompt: str, blueprint: ArchitectureBlueprint):
                 break
             print(f"     [Retry {attempt}/3] Model emitted empty content for {target_file}, regenerating...")
 
-        # Cache key infrastructure/backend files so the frontend knows exact routes & env vars
         if target_file in ("docker-compose.yml", "backend/app.py"):
             generated_context_cache[target_file] = code_content
 
@@ -180,7 +182,6 @@ def stage_3_verify_and_heal(blueprint: ArchitectureBlueprint):
                 with open(js_path, "r", encoding="utf-8") as f:
                     js_content = f.read()
                 
-                # Strip imports of .css or .svg files that were not generated
                 cleaned_js, count = re.subn(
                     r"(?m)^\s*import\s+['\"].*\.(css|svg)['\"];?\s*\n",
                     "",
@@ -193,7 +194,21 @@ def stage_3_verify_and_heal(blueprint: ArchitectureBlueprint):
                         f"[AUTO-HEALED] Stripped {count} unapproved CSS/SVG import(s) from {req_file}"
                     )
 
-    # 4. Write an IRC & Verification Report into the generated repo
+    # 4. Check and auto-heal deprecated @app.before_first_request -> @app.before_request in Flask 3.0
+    backend_app_path = os.path.join(OUTPUT_DIR, "backend/app.py")
+    if os.path.exists(backend_app_path):
+        with open(backend_app_path, "r", encoding="utf-8") as f:
+            py_content = f.read()
+
+        if "@app.before_first_request" in py_content:
+            py_content = py_content.replace("@app.before_first_request", "@app.before_request")
+            with open(backend_app_path, "w", encoding="utf-8") as f:
+                f.write(py_content)
+            audit_notes.append(
+                "[AUTO-HEALED] Upgraded deprecated '@app.before_first_request' to '@app.before_request' in backend/app.py"
+            )
+
+    # 5. Write an IRC & Verification Report into the generated repo
     report_path = os.path.join(OUTPUT_DIR, "IRC_AUDIT_REPORT.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("# Automated Architecture & IRC Audit Report\n\n")
