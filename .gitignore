@@ -1,5 +1,5 @@
 # Ignore the AI generated output folder
-generated_repo/
+generated_repo*/
 
 # Ignore the Python virtual environment
 venv/
