@@ -1,0 +1,16 @@
+# Ignore the AI generated output folder
+generated_repo/
+
+# Ignore the Python virtual environment
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore environment variables
+.env
+
+#Ignore prompt.txt
+prompt.txt
