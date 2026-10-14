@@ -75,7 +75,7 @@ Rather than treating the 7B model as an all-knowing oracle, the architecture sep
 
 The most valuable findings came from observing where the 7B local model failed during initial iterations and re-architecting the Python orchestrator to eliminate those failure modes.
 
-### Iteration 1: Naive Single-Shot Generation (`scaffold_agent_v1.py` - Initial)
+### Iteration 1: Naive Single-Shot Generation (`scaffold-agent-v1.py` - Initial)
 In the first prototype, the model was prompted to return the entire repository inside a single Pydantic dictionary (`files: dict[str, str]`).
 
 ```text
@@ -118,7 +118,7 @@ generated_repo/
 
 * **Key Technical Insight:** Small local models (7B parameters) cannot reliably track cross-file directory state while simultaneously writing raw code for 8+ files inside one monolithic JSON response. **Prompt engineering alone could not fix this; the orchestration architecture had to change.**
 
-### Iteration 3: Multi-Stage Agentic Pipeline (`scaffold_agent_v2.py`)
+### Iteration 3: Multi-Stage Agentic Pipeline (`scaffold-agent-v2.py`)
 By decoupling **Stage 1 (Blueprint Locking)** from **Stage 2 (File-by-File Generation)**, the model is never allowed to invent directory paths while writing code. Python holds the state (the locked `ArchitectureBlueprint`), and the LLM only writes one isolated file per API call using that blueprint as read-only context.
 
 ```text
@@ -175,8 +175,8 @@ While the V2 agent eliminates initial setup drag, it is a **starting scaffold, n
 ```text
 liminal-scaffold-agent/
 ├── prompt.txt               # Plain-text architectural prompt input
-├── scaffold_agent_v1.py     # Baseline single-shot generator (demonstrates context schism)
-├── scaffold_agent_v2.py     # 3-Stage Agentic Pipeline (IRC + Blueprint Lock + Self-Healing)
+├── scaffold-agent-v1.py     # Baseline single-shot generator (demonstrates context schism)
+├── scaffold-agent-v2.py     # 3-Stage Agentic Pipeline (IRC + Blueprint Lock + Self-Healing)
 ├── .gitignore               # Excludes venv/, .env, prompt.txt and generated_repo/
 └── README.md                # Case study documentation & architectural analysis
 ```
@@ -200,7 +200,7 @@ liminal-scaffold-agent/
    Modify `prompt.txt` with your desired MVP stack.
 3. **Run the V2 3-Stage Scaffold Agent:**
    ```powershell
-   python scaffold_agent_v2.py
+   python scaffold-agent-v2.py
    ```
 4. **Verify and launch the generated repository:**
    ```powershell
