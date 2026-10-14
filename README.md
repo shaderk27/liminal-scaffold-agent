@@ -4,7 +4,7 @@
 > **Liminal Apprentice Case Assessment — AI / Software Engineering Track**  
 > **Stack:** Python, Ollama (`qwen2.5-coder:7b`), Pydantic (Structured Outputs), Docker Compose
 
----
+
 
 ## 1. Problem Framing: The "Boilerplate-to-Launch" Drag
 
@@ -22,7 +22,6 @@ Every time an engineering team spins up a new MVP, hours or days are lost to rep
 
 **The Objective:** Build a local, zero-cost, stack-agnostic **Scaffold Agent** that takes a plain-text architectural prompt (`prompt.txt`), validates it for missing operational requirements, and deterministically generates a complete, containerized repository ready to run via `docker compose up --build`.
 
----
 
 ## 2. Solution Design: Constraining Non-Deterministic Models
 
@@ -71,7 +70,6 @@ Rather than treating the 7B model as an all-knowing oracle, the architecture sep
 1. **Incongruous Requirements Checklist (IRC):** Prompts written by humans are almost always underspecified (e.g., requesting "a React and Flask app in Docker" without mentioning CORS, `Dockerfile`s, or `requirements.txt`). Stage 1 treats the user prompt as incomplete and explicitly logs every implicit architectural requirement it resolves before locked paths are created.
 2. **Strict Data Sanitization:** System prompts enforce enterprise repository hygiene—relying strictly on generic, standardized mock data and prohibiting hardcoded personal or teammate names in seed data, comments, or configuration files.
 
----
 
 ## 3. Execution & Proof: The Evolution from V1 to V2
 
@@ -141,7 +139,6 @@ generated_repo/
         └── App.js
 ```
 
----
 
 ## 4. Impact Analysis: Before vs. After AI
 
@@ -165,17 +162,13 @@ While the V2 agent eliminates initial setup drag, it is a **starting scaffold, n
 * **Data Persistence & Migrations:** Verifying that named Docker volumes (`pgdata:/var/lib/postgresql/data`) and schema migration tools (Alembic) are properly configured so container restarts do not wipe state.
 * **Dependency Pinning:** Auditing `requirements.txt` and `package.json` for vulnerable or conflicting package versions.
 
----
 
-## 5. Runway: What I Would Do
-
-With slightly more runway, I would
+## 5. Future Improvements
 
 1. **Run Against Other Models for Output Comparison**
 2. **Interactive IRC Approval CLI:**
    * Pause after Stage 1 in the terminal so the developer can review, edit, or approve the `ArchitectureBlueprint` and IRC resolutions before Stage 2 spends compute generating the files.
 
----
 
 ## 6. Repository Structure & Quickstart
 
