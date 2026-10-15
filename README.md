@@ -165,7 +165,8 @@ While the V2 agent eliminates initial setup drag, it is a **starting scaffold, n
 
 ## 5. Future Improvements
 
-1. **Run Against Other Models for Output Comparison**
+1. **Automated Docker Sandbox Execution Loop (Stage 4):**
+   * Run `docker compose up --build` automatically via Python `subprocess`, capture `stderr` compiler or runtime stack traces on failure, and feed the exact error back to the LLM to self-heal the broken file (up to N=3 retries).
 2. **Interactive IRC Approval CLI:**
    * Pause after Stage 1 in the terminal so the developer can review, edit, or approve the `ArchitectureBlueprint` and IRC resolutions before Stage 2 spends compute generating the files.
 
