@@ -205,7 +205,7 @@ liminal-scaffold-agent/
    ```
 4. **Verify and launch the generated repository:**
    ```powershell
-   cd generated_repo
+   cd generated_repo_{timestamp} (displayed in the CLI)
    type IRC_AUDIT_REPORT.md
    docker compose up --build
    ```
